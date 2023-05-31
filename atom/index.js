@@ -1,27 +1,29 @@
 import { clean } from '../clean-stores/index.js'
 
 let listenerQueue = []
-
-export let atom = (initialValue, level) => {
+export let autosubscriberStack = []
+export let autosubscriber = cb =>
+  cb ? autosubscriberStack.at(-1)(cb) : autosubscriberStack.at(-1)
+export let atom = initialValue => {
   let listeners = []
   let store = {
+    a: autosubscriberStack.at(-1),
     get() {
       if (!store.lc) {
         store.listen(() => {})()
       }
       return store.value
     },
-    l: level || 0,
+    l: 0,
     lc: 0,
-    listen(listener, listenerLevel) {
-      store.lc = listeners.push(listener, listenerLevel || store.l) / 2
+    listen(listener, listenerStore) {
+      store.lc = listeners.push(listener, listenerStore || store) / 2
 
       return () => {
         let index = listeners.indexOf(listener)
         if (~index) {
           listeners.splice(index, 2)
-          store.lc--
-          if (!store.lc) store.off()
+          if (!--store.lc) store.off()
         }
       }
     },
@@ -30,47 +32,44 @@ export let atom = (initialValue, level) => {
       for (let i = 0; i < listeners.length; i += 2) {
         listenerQueue.push(
           listeners[i],
+          listeners[i + 1],
           store.value,
           changedKey,
-          listeners[i + 1]
         )
       }
 
       if (runListenerQueue) {
         for (let i = 0; i < listenerQueue.length; i += 4) {
-          let skip = false
-          for (let j = i + 7; j < listenerQueue.length; j += 4) {
-            if (listenerQueue[j] < listenerQueue[i + 3]) {
-              skip = true
-              break
+          let skip
+          for (let j = i + 1; !skip && (j += 4) < listenerQueue.length;) {
+            if (listenerQueue[j].l < listenerQueue[i + 1].l) {
+              skip = listenerQueue.push(
+                listenerQueue[i],
+                listenerQueue[i + 1],
+                listenerQueue[i + 2],
+                listenerQueue[i + 3]
+              )
             }
           }
 
-          if (skip) {
-            listenerQueue.push(
-              listenerQueue[i],
-              listenerQueue[i + 1],
-              listenerQueue[i + 2],
-              listenerQueue[i + 3]
-            )
-          } else {
-            listenerQueue[i](listenerQueue[i + 1], listenerQueue[i + 2])
+          if (!skip) {
+            listenerQueue[i](listenerQueue[i + 2], listenerQueue[i + 3])
           }
         }
         listenerQueue.length = 0
       }
     },
-    off() {}, /* It will be called on last listener unsubscribing.
-                 We will redefine it in onMount and onStop. */
+    off: () => {}, /* It will be called on last listener unsubscribing.
+                       We will redefine it in onMount and onStop. */
     set(data) {
       if (store.value !== data) {
         store.value = data
         store.notify()
       }
     },
-    subscribe(cb, listenerLevel) {
-      let unbind = store.listen(cb, listenerLevel)
-      cb(store.value)
+    subscribe(listener, listenerStore) {
+      let unbind = store.listen(listener, listenerStore)
+      listener(store.value)
       return unbind
     },
     value: initialValue
