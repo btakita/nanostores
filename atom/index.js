@@ -4,7 +4,8 @@ let listenerQueue = []
 
 export let atom = (initialValue, level) => {
   let listeners = []
-  let store = {
+  let store = () => store.get()
+  Object.assign(store, {
     lc: 0,
     l: level || 0,
     value: initialValue,
@@ -73,8 +74,8 @@ export let atom = (initialValue, level) => {
       return unbind
     },
     off() {} /* It will be called on last listener unsubscribing.
-                We will redefine it in onMount and onStop. */
-  }
+     We will redefine it in onMount and onStop. */
+  })
 
   if (process.env.NODE_ENV !== 'production') {
     store[clean] = () => {

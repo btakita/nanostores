@@ -18,6 +18,7 @@ export type ReadonlyIfObject<Value> = Value extends undefined
  * Store object.
  */
 export interface ReadableAtom<Value = any> {
+  (): Value
   readonly [lastAction]: string | undefined
   readonly [actionId]: number | undefined
 

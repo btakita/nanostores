@@ -11,6 +11,7 @@ export type DeepMapStore<T extends BaseDeepMap> = Omit<
   WritableAtom<T>,
   'setKey' | 'listen' | 'subscribe'
 > & {
+  (): T
   /**
    * Change key in store value.
    *
