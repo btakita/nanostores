@@ -107,11 +107,25 @@
       "limit": "389 B"
     },
     {
-      "name": "All",
+      "name": "Computed Allish",
       "import": {
         "./index.js": "{ map, computed, action }"
       },
       "limit": "1100 B"
+    },
+    {
+      "name": "Memo Allish",
+      "import": {
+        "./index.js": "{ map, memo, action }"
+      },
+      "limit": "1159 B"
+    },
+    {
+      "name": "All",
+      "import": {
+        "./index.js": "{ map, computed, action, memo }"
+      },
+      "limit": "1257 B"
     }
   ],
   "clean-publish": {
