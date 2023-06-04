@@ -35,20 +35,14 @@ export let computed = (storesOrCb, cb) => {
   let unbinds = []
 
   let run = () => {
-    let diamondArgsIsUnset = !diamondArgs
-    if (!isPredefined && diamondArgsIsUnset) {
-      derived.set(runCb())
-    }
     let args = stores.map(store => store.get())
     if (
-      diamondArgsIsUnset ||
+      !diamondArgs ||
       args.some((arg, i) => arg !== diamondArgs[i])
     ) {
-      if (isPredefined || !diamondArgsIsUnset) {
-        derived.set(runCb(args))
-        if (!isPredefined) {
-          args = stores.map(store => store.get())
-        }
+      derived.set(runCb(args))
+      if (!isPredefined) {
+        args = stores.map(store => store.get())
       }
       diamondArgs = args
     }
