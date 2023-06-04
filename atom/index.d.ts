@@ -75,7 +75,7 @@ export interface ReadableAtom<Value = any> {
    *
    * @returns Store value.
    */
-  get(): Value
+  get(parentGetter?: (store: Store) => Value): Value
 
   /**
    * Unbind all listeners.
