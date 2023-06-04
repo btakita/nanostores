@@ -104,28 +104,28 @@
       "import": {
         "./index.js": "{ atom }"
       },
-      "limit": "389 B"
+      "limit": "372 B"
     },
     {
       "name": "Computed Allish",
       "import": {
         "./index.js": "{ map, computed, action }"
       },
-      "limit": "1101 B"
+      "limit": "1081 B"
     },
     {
       "name": "Memo Allish",
       "import": {
         "./index.js": "{ map, memo, action }"
       },
-      "limit": "1150 B"
+      "limit": "1129 B"
     },
     {
       "name": "All",
       "import": {
         "./index.js": "{ map, computed, action, memo }"
       },
-      "limit": "1244 B"
+      "limit": "1226 B"
     }
   ],
   "clean-publish": {

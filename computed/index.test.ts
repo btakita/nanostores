@@ -221,17 +221,14 @@ test('prevents diamond dependency problem 5', () => {
 
   displayName.listen(() => {})
   equal(displayName.get(), 'John Doe')
-  equal(displayName(), 'John Doe')
   equal(events, 'short full display ')
 
   firstName.set('Benedict')
   equal(displayName.get(), 'Benedict Doe')
-  equal(displayName(), 'Benedict Doe')
   equal(events, 'short full display short full display ')
 
   firstName.set('Montgomery')
   equal(displayName.get(), 'Montgomery')
-  equal(displayName(), 'Montgomery')
   equal(events, 'short full display short full display short full display ')
 })
 
@@ -268,14 +265,12 @@ test('prevents dependency listeners from being out of order', () => {
   })
 
   equal(b.get(), '0ab')
-  equal(b(), '0ab')
   let values: string[] = []
   let unsubscribe = b.subscribe($b => values.push($b))
   equal(values, ['0ab'])
 
   clock.tick(STORE_UNMOUNT_DELAY * 2)
   equal(a.get(), '0a')
-  equal(a(), '0a')
   base.set(1)
   equal(values, ['0ab', '1ab'])
 
@@ -337,16 +332,13 @@ test('is compatible with onMount', () => {
   clock.runAll()
   ok(deferrer.lc > 0)
   equal(deferrer.get(), store.get() * 2)
-  equal(deferrer(), store() * 2)
-  equal(deferrerValue, store() * 2)
+  equal(deferrerValue, store.get() * 2)
   ok(store.lc > 0)
   equal(events, 'init ')
 
   store.set(3)
   equal(deferrer.get(), store.get() * 2)
-  equal(deferrer(), store() * 2)
   equal(deferrerValue, store.get() * 2)
-  equal(deferrerValue, store() * 2)
 
   unbind()
   clock.runAll()
@@ -358,9 +350,7 @@ test('computes initial value when argument is undefined', () => {
   let one = atom<string | undefined>(undefined)
   let two = computed(one, (value: string | undefined) => !!value)
   equal(one.get(), undefined)
-  equal(one(), undefined)
   equal(two.get(), false)
-  equal(two(), false)
 })
 
 test.run()

@@ -34,19 +34,19 @@ export let memo = cb => {
   let diamondArgs
   let derived = atom(undefined)
   let unbinds = []
-  let get = store => {
+  let cx = store => {
     if (!~stores.indexOf(store)) {
       stores.push(store)
       derived.l = Math.max(...stores.map(s => s.l)) + 1
       unbinds.push(store.listen(run, derived))
     }
-    return store(null)
+    return store.get(null)
   }
 
   let runCb = ()=>{
-    globalThis[nanostoresGetSym].push(get)
+    globalThis[nanostoresGetSym].push(cx)
     try {
-      return cb(get)
+      return cb(cx)
     } finally {
       globalThis[nanostoresGetSym].pop()
     }

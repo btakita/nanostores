@@ -22,9 +22,9 @@ test('converts stores values', () => {
   let number = atom<{ number: number }>({ number: 0 })
 
   let renders = 0
-  let combine = memo(get => {
+  let combine = memo(cx => {
     renders += 1
-    return `${get(letter).letter} ${number().number}`
+    return `${cx(letter).letter} ${number.get(cx).number}`
   })
   equal(renders, 0)
 
@@ -52,7 +52,7 @@ test('converts stores values', () => {
 test('works with single store', () => {
   let number = atom<number>(1)
   let decimal = memo(() => {
-    return number() * 10
+    return number.get() * 10
   })
 
   let value
@@ -71,12 +71,12 @@ test('prevents diamond dependency problem 1', () => {
   let store = atom<number>(0)
   let values: string[] = []
 
-  let a = memo(() => `a${store()}`)
-  let b = memo(get => get(a).replace('a', 'b'))
-  let c = memo(() => a().replace('a', 'c'))
-  let d = memo(get => a(get).replace('a', 'd'))
+  let a = memo(() => `a${store.get()}`)
+  let b = memo(cx => cx(a).replace('a', 'b'))
+  let c = memo(() => a.get().replace('a', 'c'))
+  let d = memo(cx => a.get(cx).replace('a', 'd'))
 
-  let combined = memo(() => `${b()}${c()}${d()}`)
+  let combined = memo(() => `${b.get()}${c.get()}${d.get()}`)
 
   let unsubscribe = combined.subscribe(v => {
     values.push(v)
@@ -96,13 +96,13 @@ test('prevents diamond dependency problem 2', () => {
   let store = atom<number>(0)
   let values: string[] = []
 
-  let a = memo(get => `a${store(get)}`)
-  let b = memo(() => a().replace('a', 'b'))
-  let c = memo(get => get(b).replace('b', 'c'))
-  let d = memo(() => c().replace('c', 'd'))
-  let e = memo(get => d(get).replace('d', 'e'))
+  let a = memo(cx => `a${store.get(cx)}`)
+  let b = memo(() => a.get().replace('a', 'b'))
+  let c = memo(cx => cx(b).replace('b', 'c'))
+  let d = memo(() => c.get().replace('c', 'd'))
+  let e = memo(cx => d.get(cx).replace('d', 'e'))
 
-  let combined = memo(() => [a(), e()].join(''))
+  let combined = memo(() => [a.get(), e.get()].join(''))
 
   let unsubscribe = combined.subscribe(v => {
     values.push(v)
@@ -120,14 +120,14 @@ test('prevents diamond dependency problem 3', () => {
   let store = atom<number>(0)
   let values: string[] = []
 
-  let a = memo(() => `a${store()}`)
-  let b = memo(get => a(get).replace('a', 'b'))
-  let c = memo<string, ReadableAtom<string>>(get => b(get).replace('b', 'c'))
-  let d = memo<string, ReadableAtom<string>>(get => get(c).replace('c', 'd'))
+  let a = memo(() => `a${store.get()}`)
+  let b = memo(cx => a.get(cx).replace('a', 'b'))
+  let c = memo<string, ReadableAtom<string>>(cx => b.get(cx).replace('b', 'c'))
+  let d = memo<string, ReadableAtom<string>>(cx => cx(c).replace('c', 'd'))
 
   let combined = memo(
     () =>
-      `${a()}${b()}${c()}${d()}`
+      `${a.get()}${b.get()}${c.get()}${d.get()}`
   )
 
   let unsubscribe = combined.subscribe(v => {
@@ -151,19 +151,19 @@ test('prevents diamond dependency problem 4 (complex)', () => {
     (name: string, ...v: (string | number)[]):string =>
       `${name}${v.join('')}`
 
-  let a = memo(() => fn('a', store1()))
-  let b = memo(get => fn('b', get(store2)))
+  let a = memo(() => fn('a', store1.get()))
+  let b = memo(cx => fn('b', cx(store2)))
 
-  let c = memo(() => fn('c', a(), b()))
-  let d = memo(get => fn('d', a(get)))
+  let c = memo(() => fn('c', a.get(), b.get()))
+  let d = memo(cx => fn('d', a.get(cx)))
 
-  let e = memo(() => fn('e', c(), d()))
+  let e = memo(() => fn('e', c.get(), d.get()))
 
-  let f = memo(get => fn('f', get(e)))
-  let g = memo(() => fn('g', f()))
+  let f = memo(cx => fn('f', cx(e)))
+  let g = memo(() => fn('g', f.get()))
 
-  let combined1 = memo(get => e(get))
-  let combined2 = memo(() => [e(), g()].join(''))
+  let combined1 = memo(cx => e.get(cx))
+  let combined2 = memo(() => [e.get(), g.get()].join(''))
 
   let unsubscribe1 = combined1.subscribe(v => {
     values.push(v)
@@ -195,19 +195,19 @@ test('prevents diamond dependency problem 5', () => {
   let events = ''
   let firstName = atom('John')
   let lastName = atom('Doe')
-  let fullName = memo(get => {
-    let val = `${firstName()} ${get(lastName)}`
+  let fullName = memo(cx => {
+    let val = `${firstName.get()} ${cx(lastName)}`
     events += 'full '
     return val
   })
-  let isFirstShort = memo(get => {
-    let val = firstName(get).length < 10
+  let isFirstShort = memo(cx => {
+    let val = firstName.get(cx).length < 10
     events += 'short '
     return val
   })
   let displayName = memo(
     () => {
-      let val = isFirstShort() ? fullName() : firstName()
+      let val = isFirstShort.get() ? fullName.get() : firstName.get()
       events += 'display '
       return val
     }
@@ -217,17 +217,14 @@ test('prevents diamond dependency problem 5', () => {
 
   displayName.listen(() => {})
   equal(displayName.get(), 'John Doe')
-  equal(displayName(), 'John Doe')
   equal(events, 'short full display ')
 
   firstName.set('Benedict')
   equal(displayName.get(), 'Benedict Doe')
-  equal(displayName(), 'Benedict Doe')
   equal(events, 'short full display short full display ')
 
   firstName.set('Montgomery')
   equal(displayName.get(), 'Montgomery')
-  equal(displayName(), 'Montgomery')
   equal(events, 'short full display short full display short full display ')
 })
 
@@ -236,11 +233,11 @@ test('prevents diamond dependency problem 6', () => {
   let store2 = atom<number>(0)
   let values: string[] = []
 
-  let a = memo(get => `a${get(store1)}`)
-  let b = memo(() => `b${store2()}`)
-  let c = memo(() => b().replace('b', 'c'))
+  let a = memo(cx => `a${cx(store1)}`)
+  let b = memo(() => `b${store2.get()}`)
+  let c = memo(() => b.get().replace('b', 'c'))
 
-  let combined = memo(() => `${a()}${c()}`)
+  let combined = memo(() => `${a.get()}${c.get()}`)
 
   let unsubscribe = combined.subscribe(v => {
     values.push(v)
@@ -257,21 +254,19 @@ test('prevents diamond dependency problem 6', () => {
 test('prevents dependency listeners from being out of order', () => {
   let base = atom(0)
   let a = memo(() => {
-    return `${base()}a`
+    return `${base.get()}a`
   })
-  let b = memo(get => {
-    return `${a(get)}b`
+  let b = memo(cx => {
+    return `${a.get(cx)}b`
   })
 
   equal(b.get(), '0ab')
-  equal(b(), '0ab')
   let values: string[] = []
   let unsubscribe = b.subscribe($b => values.push($b))
   equal(values, ['0ab'])
 
   clock.tick(STORE_UNMOUNT_DELAY * 2)
   equal(a.get(), '0a')
-  equal(a(), '0a')
   base.set(1)
   equal(values, ['0ab', '1ab'])
 
@@ -281,12 +276,12 @@ test('prevents dependency listeners from being out of order', () => {
 test('notifies when stores change within the same notifyId', () => {
   let val$ = atom(1)
 
-  let computed1$ = memo(get => {
-    return get(val$)
+  let computed1$ = memo(cb => {
+    return val$.get(cb)
   })
 
   let computed2$ = memo(() => {
-    return computed1$()
+    return computed1$.get()
   })
 
   let events: any[] = []
@@ -315,7 +310,7 @@ test('notifies when stores change within the same notifyId', () => {
 
 test('is compatible with onMount', () => {
   let store = atom(1)
-  let deferrer = memo(get => store(get) * 2)
+  let deferrer = memo(cx => store.get(cx) * 2)
 
   let events = ''
   onMount(deferrer, () => {
@@ -333,16 +328,13 @@ test('is compatible with onMount', () => {
   clock.runAll()
   ok(deferrer.lc > 0)
   equal(deferrer.get(), store.get() * 2)
-  equal(deferrer(), store() * 2)
-  equal(deferrerValue, store() * 2)
+  equal(deferrerValue, store.get() * 2)
   ok(store.lc > 0)
   equal(events, 'init ')
 
   store.set(3)
   equal(deferrer.get(), store.get() * 2)
-  equal(deferrer(), store() * 2)
   equal(deferrerValue, store.get() * 2)
-  equal(deferrerValue, store() * 2)
 
   unbind()
   clock.runAll()
@@ -352,11 +344,9 @@ test('is compatible with onMount', () => {
 
 test('computes initial value when argument is undefined', () => {
   let one = atom<string | undefined>(undefined)
-  let two = memo(() => !!one())
+  let two = memo(() => !!one.get())
   equal(one.get(), undefined)
-  equal(one(), undefined)
   equal(two.get(), false)
-  equal(two(), false)
 })
 
 test.run()
