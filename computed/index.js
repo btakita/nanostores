@@ -32,7 +32,7 @@ export let memo = cb => {
   let stores = []
 
   let diamondArgs
-  let derived = atom(undefined, 0)
+  let derived = atom(undefined)
   let unbinds = []
   let get = store => {
     if (!~stores.indexOf(store)) {
