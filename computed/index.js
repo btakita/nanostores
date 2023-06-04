@@ -50,19 +50,21 @@ export let memo = cb => {
     return val
   }
 
+  let argsNew = () => stores.map(store => store.get())
+
   let run = () => {
     let diamondArgsIsUndefined = diamondArgs === undefined
     if (diamondArgsIsUndefined) {
       derived.set(runCb())
     }
-    let args = stores.map(store => store.get())
+    let args = argsNew()
     if (
       diamondArgsIsUndefined ||
       args.some((arg, i) => arg !== diamondArgs[i])
     ) {
       if (!diamondArgsIsUndefined) {
         derived.set(runCb())
-        args = stores.map(store => store.get())
+        args = argsNew()
       }
       diamondArgs = args
     }
