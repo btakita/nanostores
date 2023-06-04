@@ -34,4 +34,11 @@ interface Computed {
   ): ReadableAtom<Value>
 }
 
+interface ComputedSolid {
+  <Value extends any>(
+    cb: (get: (atom: ReadableAtom)=>StoreValue<ReadableAtom>) => Value
+  ): ReadableAtom<Value>
+}
+
 export const computed: Computed
+export const computedSignal: ComputedSolid

@@ -4,7 +4,7 @@ let listenerQueue = []
 
 export let atom = (initialValue, level) => {
   let listeners = []
-  let store = () => store.get()
+  let store = parentGetter => store.get(parentGetter)
   Object.assign(store, {
     lc: 0,
     l: level || 0,
@@ -15,11 +15,11 @@ export let atom = (initialValue, level) => {
         store.notify()
       }
     },
-    get() {
+    get(parentGetter) {
       if (!store.lc) {
         store.listen(() => {})()
       }
-      return store.value
+      return parentGetter ? parentGetter(store) : store.value
     },
     notify(changedKey) {
       let runListenerQueue = !listenerQueue.length
@@ -28,7 +28,7 @@ export let atom = (initialValue, level) => {
           listeners[i],
           store.value,
           changedKey,
-          listeners[i + 1]
+          listeners[i + 1].l || listeners[i + 1]
         )
       }
 
@@ -57,7 +57,7 @@ export let atom = (initialValue, level) => {
       }
     },
     listen(listener, listenerLevel) {
-      store.lc = listeners.push(listener, listenerLevel || store.l) / 2
+      store.lc = listeners.push(listener, listenerLevel || store) / 2
 
       return () => {
         let index = listeners.indexOf(listener)

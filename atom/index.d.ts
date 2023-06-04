@@ -1,4 +1,5 @@
 import type { lastAction, actionId } from '../action/index.js'
+import type { StoreValue } from '../map/index.js'
 
 export type AllKeys<T> = T extends any ? keyof T : never
 
@@ -18,7 +19,7 @@ export type ReadonlyIfObject<Value> = Value extends undefined
  * Store object.
  */
 export interface ReadableAtom<Value = any> {
-  (): Value
+  (parentGetter?: (atom: ReadableAtom)=>StoreValue<ReadableAtom>): Value
   readonly [lastAction]: string | undefined
   readonly [actionId]: number | undefined
 
@@ -60,7 +61,7 @@ export interface ReadableAtom<Value = any> {
    * @param listener Callback with store value.
    * @returns Function to remove listener.
    */
-  listen(listener: (value: ReadonlyIfObject<Value>) => void): () => void
+  listen(listener: (value: ReadonlyIfObject<Value>) => void): (lUpdate?: number) => void
 
   /**
    * Get store value.
