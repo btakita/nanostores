@@ -1,5 +1,8 @@
 import { clean } from '../clean-stores/index.js'
 
+export let nanostoresGetSym = Symbol.for('nanostoresGet')
+globalThis[nanostoresGetSym] = []
+
 let listenerQueue = []
 
 export let atom = (initialValue, level) => {
@@ -15,7 +18,7 @@ export let atom = (initialValue, level) => {
         store.notify()
       }
     },
-    get(parentGetter) {
+    get(parentGetter = globalThis[nanostoresGetSym].at(-1)) {
       if (!store.lc) {
         store.listen(() => {})()
       }

@@ -1,5 +1,5 @@
 import { onMount } from '../lifecycle/index.js'
-import { atom } from '../atom/index.js'
+import { atom, nanostoresGetSym } from '../atom/index.js'
 
 export let computed = (stores, cb) => {
   if (!Array.isArray(stores)) stores = [stores]
@@ -40,13 +40,20 @@ export let computedSignal = cb => {
       derived.l = Math.max(...stores.map(s => s.l)) + 1
       unbinds.push(store.listen(run, derived))
     }
-    return store()
+    return store(null)
+  }
+
+  let runCb = ()=>{
+    globalThis[nanostoresGetSym].push(get)
+    let val = cb(get)
+    globalThis[nanostoresGetSym].pop()
+    return val
   }
 
   let run = () => {
     let diamondArgsIsUndefined = diamondArgs === undefined
     if (diamondArgsIsUndefined) {
-      derived.set(cb(get))
+      derived.set(runCb())
     }
     let args = stores.map(store => store.get())
     if (
@@ -54,7 +61,7 @@ export let computedSignal = cb => {
       args.some((arg, i) => arg !== diamondArgs[i])
     ) {
       if (!diamondArgsIsUndefined) {
-        derived.set(cb(get))
+        derived.set(runCb())
         args = stores.map(store => store.get())
       }
       diamondArgs = args
