@@ -3,7 +3,7 @@ import { atom, nanostoresGetSym } from '../atom/index.js'
 
 export let computed = (storesOrCb, cb) => {
   let isPredefined, stores, runCb
-  let lGet = () => Math.max(...stores.map(s => s.l)) + 1
+  let lNew = () => Math.max(...stores.map(s => s.l)) + 1
   if (cb) {
     isPredefined = 1
     stores = (!Array.isArray(storesOrCb)) ? stores = [storesOrCb] : storesOrCb
@@ -12,7 +12,7 @@ export let computed = (storesOrCb, cb) => {
     let get = store => {
       if (!~stores.indexOf(store)) {
         stores.push(store)
-        derived.l = lGet()
+        derived.l = lNew()
         unbinds.push(store.listen(run, derived))
       }
       return store(null)
@@ -22,14 +22,16 @@ export let computed = (storesOrCb, cb) => {
     stores = []
     runCb = ()=>{
       globalThis[nanostoresGetSym].push(get)
-      let val = cb(get)
-      globalThis[nanostoresGetSym].pop()
-      return val
+      try {
+        return cb(get)
+      } finally {
+        globalThis[nanostoresGetSym].pop()
+      }
     }
   }
 
   let diamondArgs
-  let derived = atom(undefined, isPredefined ? lGet() : 0)
+  let derived = atom(undefined, isPredefined ? lNew() : 0)
   let unbinds = []
 
   let run = () => {
