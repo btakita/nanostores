@@ -2,32 +2,23 @@ import { onMount } from '../lifecycle/index.js'
 import { atom, nanostoresGetSym } from '../atom/index.js'
 
 export let computed = (stores, cb) => {
-  let isPredefined, runCb
+  let isPredefined
   let lNew = () => Math.max(...stores.map(s => s.l)) + 1
   if (cb) {
     isPredefined = 1
     stores = Array.isArray(stores) ? stores : [stores]
-    runCb = args => cb(...args)
   } else {
     isPredefined = 0
     cb = stores
     stores = []
-    let get = store => {
-      if (!~stores.indexOf(store)) {
-        stores.push(store)
-        derived.l = lNew()
-        unbinds.push(store.listen(run, derived))
-      }
-      return store(null)
+  }
+  let get = store => {
+    if (!~stores.indexOf(store)) {
+      stores.push(store)
+      derived.l = lNew()
+      unbinds.push(store.listen(run, derived))
     }
-    runCb = ()=> {
-      globalThis[nanostoresGetSym].push(get)
-      try {
-        return cb(get)
-      } finally {
-        globalThis[nanostoresGetSym].pop()
-      }
-    }
+    return store(null)
   }
 
   let diamondArgs
@@ -40,7 +31,18 @@ export let computed = (stores, cb) => {
       !diamondArgs ||
       args.some((arg, i) => arg !== diamondArgs[i])
     ) {
-      derived.set(runCb(args))
+      derived.set(
+        isPredefined
+        ? cb(...args)
+        : (()=> {
+            globalThis[nanostoresGetSym].push(get)
+            try {
+              return cb(get)
+            } finally {
+              globalThis[nanostoresGetSym].pop()
+            }
+          })()
+      )
       if (!isPredefined) {
         args = stores.map(store => store.get())
       }
