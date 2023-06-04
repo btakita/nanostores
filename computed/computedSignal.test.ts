@@ -24,7 +24,7 @@ test('converts stores values', () => {
   let renders = 0
   let combine = computed(get => {
     renders += 1
-    return `${get(letter).letter} ${number().number}`
+    return `${get(letter).letter} ${number.get().number}`
   })
   equal(renders, 0)
 
@@ -52,7 +52,7 @@ test('converts stores values', () => {
 test('works with single store', () => {
   let number = atom<number>(1)
   let decimal = computed(() => {
-    return number() * 10
+    return number.get() * 10
   })
 
   let value
@@ -71,12 +71,12 @@ test('prevents diamond dependency problem 1', () => {
   let store = atom<number>(0)
   let values: string[] = []
 
-  let a = computed(() => `a${store()}`)
+  let a = computed(() => `a${store.get()}`)
   let b = computed(get => get(a).replace('a', 'b'))
-  let c = computed(() => a().replace('a', 'c'))
-  let d = computed(get => a(get).replace('a', 'd'))
+  let c = computed(() => a.get().replace('a', 'c'))
+  let d = computed(ctx => a.get(ctx).replace('a', 'd'))
 
-  let combined = computed(() => `${b()}${c()}${d()}`)
+  let combined = computed(() => `${b.get()}${c.get()}${d.get()}`)
 
   let unsubscribe = combined.subscribe(v => {
     values.push(v)
@@ -96,13 +96,13 @@ test('prevents diamond dependency problem 2', () => {
   let store = atom<number>(0)
   let values: string[] = []
 
-  let a = computed(get => `a${store(get)}`)
-  let b = computed(() => a().replace('a', 'b'))
+  let a = computed(get => `a${store.get(get)}`)
+  let b = computed(() => a.get().replace('a', 'b'))
   let c = computed(get => get(b).replace('b', 'c'))
-  let d = computed(() => c().replace('c', 'd'))
-  let e = computed(get => d(get).replace('d', 'e'))
+  let d = computed(() => c.get().replace('c', 'd'))
+  let e = computed(ctx => d.get(ctx).replace('d', 'e'))
 
-  let combined = computed(() => [a(), e()].join(''))
+  let combined = computed(() => [a.get(), e.get()].join(''))
 
   let unsubscribe = combined.subscribe(v => {
     values.push(v)
@@ -120,14 +120,14 @@ test('prevents diamond dependency problem 3', () => {
   let store = atom<number>(0)
   let values: string[] = []
 
-  let a = computed(() => `a${store()}`)
-  let b = computed(get => a(get).replace('a', 'b'))
-  let c = computed<string, ReadableAtom<string>>(get => b(get).replace('b', 'c'))
+  let a = computed(() => `a${store.get()}`)
+  let b = computed(get => a.get(get).replace('a', 'b'))
+  let c = computed<string, ReadableAtom<string>>(ctx => b.get(ctx).replace('b', 'c'))
   let d = computed<string, ReadableAtom<string>>(get => get(c).replace('c', 'd'))
 
   let combined = computed(
     () =>
-      `${a()}${b()}${c()}${d()}`
+      `${a.get()}${b.get()}${c.get()}${d.get()}`
   )
 
   let unsubscribe = combined.subscribe(v => {
@@ -151,19 +151,19 @@ test('prevents diamond dependency problem 4 (complex)', () => {
     (name: string, ...v: (string | number)[]):string =>
       `${name}${v.join('')}`
 
-  let a = computed(() => fn('a', store1()))
+  let a = computed(() => fn('a', store1.get()))
   let b = computed(get => fn('b', get(store2)))
 
-  let c = computed(() => fn('c', a(), b()))
-  let d = computed(get => fn('d', a(get)))
+  let c = computed(() => fn('c', a.get(), b.get()))
+  let d = computed(ctx => fn('d', a.get(ctx)))
 
-  let e = computed(() => fn('e', c(), d()))
+  let e = computed(() => fn('e', c.get(), d.get()))
 
   let f = computed(get => fn('f', get(e)))
-  let g = computed(() => fn('g', f()))
+  let g = computed(() => fn('g', f.get()))
 
-  let combined1 = computed(get => e(get))
-  let combined2 = computed(() => [e(), g()].join(''))
+  let combined1 = computed(ctx => e.get(ctx))
+  let combined2 = computed(() => [e.get(), g.get()].join(''))
 
   let unsubscribe1 = combined1.subscribe(v => {
     values.push(v)
@@ -196,18 +196,18 @@ test('prevents diamond dependency problem 5', () => {
   let firstName = atom('John')
   let lastName = atom('Doe')
   let fullName = computed(get => {
-    let val = `${firstName()} ${get(lastName)}`
+    let val = `${firstName.get()} ${get(lastName)}`
     events += 'full '
     return val
   })
-  let isFirstShort = computed(get => {
-    let val = firstName(get).length < 10
+  let isFirstShort = computed(ctx => {
+    let val = firstName.get(ctx).length < 10
     events += 'short '
     return val
   })
   let displayName = computed(
     () => {
-      let val = isFirstShort() ? fullName() : firstName()
+      let val = isFirstShort.get() ? fullName.get() : firstName.get()
       events += 'display '
       return val
     }
@@ -217,17 +217,14 @@ test('prevents diamond dependency problem 5', () => {
 
   displayName.listen(() => {})
   equal(displayName.get(), 'John Doe')
-  equal(displayName(), 'John Doe')
   equal(events, 'short full display ')
 
   firstName.set('Benedict')
   equal(displayName.get(), 'Benedict Doe')
-  equal(displayName(), 'Benedict Doe')
   equal(events, 'short full display short full display ')
 
   firstName.set('Montgomery')
   equal(displayName.get(), 'Montgomery')
-  equal(displayName(), 'Montgomery')
   equal(events, 'short full display short full display short full display ')
 })
 
@@ -237,10 +234,10 @@ test('prevents diamond dependency problem 6', () => {
   let values: string[] = []
 
   let a = computed(get => `a${get(store1)}`)
-  let b = computed(() => `b${store2()}`)
-  let c = computed(() => b().replace('b', 'c'))
+  let b = computed(() => `b${store2.get()}`)
+  let c = computed(() => b.get().replace('b', 'c'))
 
-  let combined = computed(() => `${a()}${c()}`)
+  let combined = computed(() => `${a.get()}${c.get()}`)
 
   let unsubscribe = combined.subscribe(v => {
     values.push(v)
@@ -257,21 +254,19 @@ test('prevents diamond dependency problem 6', () => {
 test('prevents dependency listeners from being out of order', () => {
   let base = atom(0)
   let a = computed(() => {
-    return `${base()}a`
+    return `${base.get()}a`
   })
-  let b = computed(get => {
-    return `${a(get)}b`
+  let b = computed(ctx => {
+    return `${a.get(ctx)}b`
   })
 
   equal(b.get(), '0ab')
-  equal(b(), '0ab')
   let values: string[] = []
   let unsubscribe = b.subscribe($b => values.push($b))
   equal(values, ['0ab'])
 
   clock.tick(STORE_UNMOUNT_DELAY * 2)
   equal(a.get(), '0a')
-  equal(a(), '0a')
   base.set(1)
   equal(values, ['0ab', '1ab'])
 
@@ -286,7 +281,7 @@ test('notifies when stores change within the same notifyId', () => {
   })
 
   let computed2$ = computed(() => {
-    return computed1$()
+    return computed1$.get()
   })
 
   let events: any[] = []
@@ -315,7 +310,7 @@ test('notifies when stores change within the same notifyId', () => {
 
 test('is compatible with onMount', () => {
   let store = atom(1)
-  let deferrer = computed(get => store(get) * 2)
+  let deferrer = computed(ctx => store.get(ctx) * 2)
 
   let events = ''
   onMount(deferrer, () => {
@@ -333,16 +328,13 @@ test('is compatible with onMount', () => {
   clock.runAll()
   ok(deferrer.lc > 0)
   equal(deferrer.get(), store.get() * 2)
-  equal(deferrer(), store() * 2)
-  equal(deferrerValue, store() * 2)
+  equal(deferrerValue, store.get() * 2)
   ok(store.lc > 0)
   equal(events, 'init ')
 
   store.set(3)
   equal(deferrer.get(), store.get() * 2)
-  equal(deferrer(), store() * 2)
   equal(deferrerValue, store.get() * 2)
-  equal(deferrerValue, store() * 2)
 
   unbind()
   clock.runAll()
@@ -352,11 +344,11 @@ test('is compatible with onMount', () => {
 
 test('computes initial value when argument is undefined', () => {
   let one = atom<string | undefined>(undefined)
-  let two = computed(() => !!one())
+  let two = computed(() => !!one.get())
   equal(one.get(), undefined)
-  equal(one(), undefined)
+  equal(one.get(), undefined)
   equal(two.get(), false)
-  equal(two(), false)
+  equal(two.get(), false)
 })
 
 test.run()

@@ -18,7 +18,7 @@ export let computed = (stores, cb) => {
       derived.l = lNew()
       unbinds.push(store.listen(run, derived))
     }
-    return store(null)
+    return store.get(null)
   }
 
   let diamondArgs
