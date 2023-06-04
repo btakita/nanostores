@@ -28,7 +28,7 @@ export let computed = (stores, cb) => {
   return derived
 }
 
-export let computedSignal = cb => {
+export let memo = cb => {
   let stores = []
 
   let diamondArgs

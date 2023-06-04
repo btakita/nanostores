@@ -5,7 +5,7 @@ import { equal, ok } from 'uvu/assert'
 import FakeTimers from '@sinonjs/fake-timers'
 import { test } from 'uvu'
 
-import { STORE_UNMOUNT_DELAY, computedSignal, onMount, atom } from '../index.js'
+import { STORE_UNMOUNT_DELAY, memo, onMount, atom } from '../index.js'
 
 let clock: InstalledClock
 
@@ -22,7 +22,7 @@ test('converts stores values', () => {
   let number = atom<{ number: number }>({ number: 0 })
 
   let renders = 0
-  let combine = computedSignal(get => {
+  let combine = memo(get => {
     renders += 1
     return `${get(letter).letter} ${number().number}`
   })
@@ -51,7 +51,7 @@ test('converts stores values', () => {
 
 test('works with single store', () => {
   let number = atom<number>(1)
-  let decimal = computedSignal(() => {
+  let decimal = memo(() => {
     return number() * 10
   })
 
@@ -71,12 +71,12 @@ test('prevents diamond dependency problem 1', () => {
   let store = atom<number>(0)
   let values: string[] = []
 
-  let a = computedSignal(() => `a${store()}`)
-  let b = computedSignal(get => get(a).replace('a', 'b'))
-  let c = computedSignal(() => a().replace('a', 'c'))
-  let d = computedSignal(get => a(get).replace('a', 'd'))
+  let a = memo(() => `a${store()}`)
+  let b = memo(get => get(a).replace('a', 'b'))
+  let c = memo(() => a().replace('a', 'c'))
+  let d = memo(get => a(get).replace('a', 'd'))
 
-  let combined = computedSignal(() => `${b()}${c()}${d()}`)
+  let combined = memo(() => `${b()}${c()}${d()}`)
 
   let unsubscribe = combined.subscribe(v => {
     values.push(v)
@@ -96,13 +96,13 @@ test('prevents diamond dependency problem 2', () => {
   let store = atom<number>(0)
   let values: string[] = []
 
-  let a = computedSignal(get => `a${store(get)}`)
-  let b = computedSignal(() => a().replace('a', 'b'))
-  let c = computedSignal(get => get(b).replace('b', 'c'))
-  let d = computedSignal(() => c().replace('c', 'd'))
-  let e = computedSignal(get => d(get).replace('d', 'e'))
+  let a = memo(get => `a${store(get)}`)
+  let b = memo(() => a().replace('a', 'b'))
+  let c = memo(get => get(b).replace('b', 'c'))
+  let d = memo(() => c().replace('c', 'd'))
+  let e = memo(get => d(get).replace('d', 'e'))
 
-  let combined = computedSignal(() => [a(), e()].join(''))
+  let combined = memo(() => [a(), e()].join(''))
 
   let unsubscribe = combined.subscribe(v => {
     values.push(v)
@@ -120,12 +120,12 @@ test('prevents diamond dependency problem 3', () => {
   let store = atom<number>(0)
   let values: string[] = []
 
-  let a = computedSignal(() => `a${store()}`)
-  let b = computedSignal(get => a(get).replace('a', 'b'))
-  let c = computedSignal<string, ReadableAtom<string>>(get => b(get).replace('b', 'c'))
-  let d = computedSignal<string, ReadableAtom<string>>(get => get(c).replace('c', 'd'))
+  let a = memo(() => `a${store()}`)
+  let b = memo(get => a(get).replace('a', 'b'))
+  let c = memo<string, ReadableAtom<string>>(get => b(get).replace('b', 'c'))
+  let d = memo<string, ReadableAtom<string>>(get => get(c).replace('c', 'd'))
 
-  let combined = computedSignal(
+  let combined = memo(
     () =>
       `${a()}${b()}${c()}${d()}`
   )
@@ -151,19 +151,19 @@ test('prevents diamond dependency problem 4 (complex)', () => {
     (name: string, ...v: (string | number)[]):string =>
       `${name}${v.join('')}`
 
-  let a = computedSignal(() => fn('a', store1()))
-  let b = computedSignal(get => fn('b', get(store2)))
+  let a = memo(() => fn('a', store1()))
+  let b = memo(get => fn('b', get(store2)))
 
-  let c = computedSignal(() => fn('c', a(), b()))
-  let d = computedSignal(get => fn('d', a(get)))
+  let c = memo(() => fn('c', a(), b()))
+  let d = memo(get => fn('d', a(get)))
 
-  let e = computedSignal(() => fn('e', c(), d()))
+  let e = memo(() => fn('e', c(), d()))
 
-  let f = computedSignal(get => fn('f', get(e)))
-  let g = computedSignal(() => fn('g', f()))
+  let f = memo(get => fn('f', get(e)))
+  let g = memo(() => fn('g', f()))
 
-  let combined1 = computedSignal(get => e(get))
-  let combined2 = computedSignal(() => [e(), g()].join(''))
+  let combined1 = memo(get => e(get))
+  let combined2 = memo(() => [e(), g()].join(''))
 
   let unsubscribe1 = combined1.subscribe(v => {
     values.push(v)
@@ -195,17 +195,17 @@ test('prevents diamond dependency problem 5', () => {
   let events = ''
   let firstName = atom('John')
   let lastName = atom('Doe')
-  let fullName = computedSignal(get => {
+  let fullName = memo(get => {
     let val = `${firstName()} ${get(lastName)}`
     events += 'full '
     return val
   })
-  let isFirstShort = computedSignal(get => {
+  let isFirstShort = memo(get => {
     let val = firstName(get).length < 10
     events += 'short '
     return val
   })
-  let displayName = computedSignal(
+  let displayName = memo(
     () => {
       let val = isFirstShort() ? fullName() : firstName()
       events += 'display '
@@ -236,11 +236,11 @@ test('prevents diamond dependency problem 6', () => {
   let store2 = atom<number>(0)
   let values: string[] = []
 
-  let a = computedSignal(get => `a${get(store1)}`)
-  let b = computedSignal(() => `b${store2()}`)
-  let c = computedSignal(() => b().replace('b', 'c'))
+  let a = memo(get => `a${get(store1)}`)
+  let b = memo(() => `b${store2()}`)
+  let c = memo(() => b().replace('b', 'c'))
 
-  let combined = computedSignal(() => `${a()}${c()}`)
+  let combined = memo(() => `${a()}${c()}`)
 
   let unsubscribe = combined.subscribe(v => {
     values.push(v)
@@ -256,10 +256,10 @@ test('prevents diamond dependency problem 6', () => {
 
 test('prevents dependency listeners from being out of order', () => {
   let base = atom(0)
-  let a = computedSignal(() => {
+  let a = memo(() => {
     return `${base()}a`
   })
-  let b = computedSignal(get => {
+  let b = memo(get => {
     return `${a(get)}b`
   })
 
@@ -281,11 +281,11 @@ test('prevents dependency listeners from being out of order', () => {
 test('notifies when stores change within the same notifyId', () => {
   let val$ = atom(1)
 
-  let computed1$ = computedSignal(get => {
+  let computed1$ = memo(get => {
     return get(val$)
   })
 
-  let computed2$ = computedSignal(() => {
+  let computed2$ = memo(() => {
     return computed1$()
   })
 
@@ -315,7 +315,7 @@ test('notifies when stores change within the same notifyId', () => {
 
 test('is compatible with onMount', () => {
   let store = atom(1)
-  let deferrer = computedSignal(get => store(get) * 2)
+  let deferrer = memo(get => store(get) * 2)
 
   let events = ''
   onMount(deferrer, () => {
@@ -352,7 +352,7 @@ test('is compatible with onMount', () => {
 
 test('computes initial value when argument is undefined', () => {
   let one = atom<string | undefined>(undefined)
-  let two = computedSignal(() => !!one())
+  let two = memo(() => !!one())
   equal(one.get(), undefined)
   equal(one(), undefined)
   equal(two.get(), false)

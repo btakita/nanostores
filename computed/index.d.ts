@@ -41,4 +41,4 @@ interface ComputedSolid {
 }
 
 export const computed: Computed
-export const computedSignal: ComputedSolid
+export const memo: ComputedSolid
