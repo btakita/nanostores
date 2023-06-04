@@ -45,9 +45,11 @@ export let memo = cb => {
 
   let runCb = ()=>{
     globalThis[nanostoresGetSym].push(get)
-    let val = cb(get)
-    globalThis[nanostoresGetSym].pop()
-    return val
+    try {
+      return cb(get)
+    } finally {
+      globalThis[nanostoresGetSym].pop()
+    }
   }
 
   let argsNew = () => stores.map(store => store.get())

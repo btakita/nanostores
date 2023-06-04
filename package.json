@@ -118,14 +118,14 @@
       "import": {
         "./index.js": "{ map, memo, action }"
       },
-      "limit": "1158 B"
+      "limit": "1162 B"
     },
     {
       "name": "All",
       "import": {
         "./index.js": "{ map, computed, action, memo }"
       },
-      "limit": "1256 B"
+      "limit": "1259 B"
     }
   ],
   "clean-publish": {

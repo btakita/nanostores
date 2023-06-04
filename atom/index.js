@@ -7,6 +7,7 @@ let listenerQueue = []
 
 export let atom = (initialValue, level) => {
   let listeners = []
+
   let store = parentGetter => store.get(parentGetter)
   Object.assign(store, {
     lc: 0,
