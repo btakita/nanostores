@@ -1,14 +1,17 @@
 import { onMount } from '../lifecycle/index.js'
 import { atom, nanostoresGetSym } from '../atom/index.js'
 
-export let computed = (storesOrCb, cb) => {
-  let isPredefined, stores, runCb
+export let computed = (stores, cb) => {
+  let isPredefined, runCb
   let lNew = () => Math.max(...stores.map(s => s.l)) + 1
   if (cb) {
     isPredefined = 1
-    stores = (!Array.isArray(storesOrCb)) ? stores = [storesOrCb] : storesOrCb
-    runCb = args=>cb(...args)
+    stores = Array.isArray(stores) ? stores : [stores]
+    runCb = args => cb(...args)
   } else {
+    isPredefined = 0
+    cb = stores
+    stores = []
     let get = store => {
       if (!~stores.indexOf(store)) {
         stores.push(store)
@@ -17,10 +20,7 @@ export let computed = (storesOrCb, cb) => {
       }
       return store(null)
     }
-    isPredefined = 0
-    cb = storesOrCb
-    stores = []
-    runCb = ()=>{
+    runCb = ()=> {
       globalThis[nanostoresGetSym].push(get)
       try {
         return cb(get)
