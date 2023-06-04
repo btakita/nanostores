@@ -111,7 +111,7 @@
       "import": {
         "./index.js": "{ map, computed, action }"
       },
-      "limit": "1100 B"
+      "limit": "1230 B"
     }
   ],
   "clean-publish": {

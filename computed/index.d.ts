@@ -32,13 +32,9 @@ interface Computed {
     stores: OriginStore,
     cb: (value: StoreValue<OriginStore>) => Value
   ): ReadableAtom<Value>
-}
-
-interface ComputedSolid {
   <Value extends any, OriginStore extends Store>(
     cb: (get: (atom: OriginStore)=>StoreValue<OriginStore>) => Value
   ): ReadableAtom<Value>
 }
 
 export const computed: Computed
-export const computedSignal: ComputedSolid

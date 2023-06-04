@@ -1,74 +1,61 @@
 import { onMount } from '../lifecycle/index.js'
 import { atom, nanostoresGetSym } from '../atom/index.js'
 
-export let computed = (stores, cb) => {
-  if (!Array.isArray(stores)) stores = [stores]
-
-  let diamondArgs
-  let run = () => {
-    let args = stores.map(store => store.get())
-    if (
-      diamondArgs === undefined ||
-      args.some((arg, i) => arg !== diamondArgs[i])
-    ) {
-      diamondArgs = args
-      derived.set(cb(...args))
+export let computed = (storesOrCb, cb) => {
+  let isPredefined, stores, runCb
+  let lGet = () => Math.max(...stores.map(s => s.l)) + 1
+  if (cb) {
+    isPredefined = 1
+    stores = (!Array.isArray(storesOrCb)) ? stores = [storesOrCb] : storesOrCb
+    runCb = args=>cb(...args)
+  } else {
+    let get = store => {
+      if (!~stores.indexOf(store)) {
+        stores.push(store)
+        derived.l = lGet()
+        unbinds.push(store.listen(run, derived))
+      }
+      return store(null)
+    }
+    isPredefined = 0
+    cb = storesOrCb
+    stores = []
+    runCb = ()=>{
+      globalThis[nanostoresGetSym].push(get)
+      let val = cb(get)
+      globalThis[nanostoresGetSym].pop()
+      return val
     }
   }
-  let derived = atom(undefined, Math.max(...stores.map(s => s.l)) + 1)
-
-  onMount(derived, () => {
-    let unbinds = stores.map(store => store.listen(run, derived.l))
-    run()
-    return () => {
-      for (let unbind of unbinds) unbind()
-    }
-  })
-
-  return derived
-}
-
-export let computedSignal = cb => {
-  let stores = []
 
   let diamondArgs
-  let derived = atom(undefined, 0)
+  let derived = atom(undefined, isPredefined ? lGet() : 0)
   let unbinds = []
-  let get = store => {
-    if (!~stores.indexOf(store)) {
-      stores.push(store)
-      derived.l = Math.max(...stores.map(s => s.l)) + 1
-      unbinds.push(store.listen(run, derived))
-    }
-    return store(null)
-  }
-
-  let runCb = ()=>{
-    globalThis[nanostoresGetSym].push(get)
-    let val = cb(get)
-    globalThis[nanostoresGetSym].pop()
-    return val
-  }
 
   let run = () => {
-    let diamondArgsIsUndefined = diamondArgs === undefined
-    if (diamondArgsIsUndefined) {
+    let diamondArgsIsUnset = !diamondArgs
+    if (!isPredefined && diamondArgsIsUnset) {
       derived.set(runCb())
     }
     let args = stores.map(store => store.get())
     if (
-      diamondArgsIsUndefined ||
+      diamondArgsIsUnset ||
       args.some((arg, i) => arg !== diamondArgs[i])
     ) {
-      if (!diamondArgsIsUndefined) {
-        derived.set(runCb())
-        args = stores.map(store => store.get())
+      if (isPredefined || !diamondArgsIsUnset) {
+        derived.set(runCb(args))
+        if (!isPredefined) {
+          args = stores.map(store => store.get())
+        }
       }
       diamondArgs = args
     }
   }
 
   onMount(derived, () => {
+    if (isPredefined) {
+      unbinds.push(...stores.map(store => store.listen(run, derived.l)))
+    }
     run()
     return () => {
       for (let unbind of unbinds) unbind()
