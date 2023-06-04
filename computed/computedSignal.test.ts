@@ -1,5 +1,5 @@
 import type { InstalledClock } from '@sinonjs/fake-timers'
-import type { StoreValue } from '../index.js'
+import type { ReadableAtom, StoreValue } from '../index.js'
 
 import { equal, ok } from 'uvu/assert'
 import FakeTimers from '@sinonjs/fake-timers'
@@ -121,9 +121,9 @@ test('prevents diamond dependency problem 3', () => {
   let values: string[] = []
 
   let a = computedSignal(() => `a${store()}`)
-  let b = computedSignal(get => get(a).replace('a', 'b'))
-  let c = computedSignal(() => b().replace('b', 'c'))
-  let d = computedSignal(get => c(get).replace('c', 'd'))
+  let b = computedSignal(get => a(get).replace('a', 'b'))
+  let c = computedSignal<string, ReadableAtom<string>>(get => b(get).replace('b', 'c'))
+  let d = computedSignal<string, ReadableAtom<string>>(get => get(c).replace('c', 'd'))
 
   let combined = computedSignal(
     () =>

@@ -35,8 +35,8 @@ interface Computed {
 }
 
 interface ComputedSolid {
-  <Value extends any>(
-    cb: (get: (atom: ReadableAtom)=>StoreValue<ReadableAtom>) => Value
+  <Value extends any, OriginStore extends Store>(
+    cb: (get: (atom: OriginStore)=>StoreValue<OriginStore>) => Value
   ): ReadableAtom<Value>
 }
 

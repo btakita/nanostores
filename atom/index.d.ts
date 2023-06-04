@@ -1,5 +1,5 @@
 import type { lastAction, actionId } from '../action/index.js'
-import type { StoreValue } from '../map/index.js'
+import type { Store, StoreValue } from '../map/index.js'
 
 export type AllKeys<T> = T extends any ? keyof T : never
 
@@ -19,7 +19,7 @@ export type ReadonlyIfObject<Value> = Value extends undefined
  * Store object.
  */
 export interface ReadableAtom<Value = any> {
-  (parentGetter?: (atom: ReadableAtom)=>StoreValue<ReadableAtom>): Value
+  (parentGetter?: (atom: Store)=>StoreValue<typeof atom>): Value
   readonly [lastAction]: string | undefined
   readonly [actionId]: number | undefined
 
