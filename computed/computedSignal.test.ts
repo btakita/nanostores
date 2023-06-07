@@ -22,9 +22,9 @@ test('converts stores values', () => {
   let number = atom<{ number: number }>({ number: 0 })
 
   let renders = 0
-  let combine = computed(get => {
+  let combine = computed(cx => {
     renders += 1
-    return `${get(letter).letter} ${number.get().number}`
+    return `${cx(letter).letter} ${number.get().number}`
   })
   equal(renders, 0)
 
@@ -71,12 +71,12 @@ test('prevents diamond dependency problem 1', () => {
   let store = atom<number>(0)
   let values: string[] = []
 
-  let a = computed(() => `a${store.get()}`)
-  let b = computed(get => get(a).replace('a', 'b'))
-  let c = computed(() => a.get().replace('a', 'c'))
-  let d = computed(ctx => a.get(ctx).replace('a', 'd'))
+  let a = computed(cx => `a${store.get(cx)}`)
+  let b = computed(cx => cx(a).replace('a', 'b'))
+  let c = computed(cx => a.get(cx).replace('a', 'c'))
+  let d = computed(cx => a.get(cx).replace('a', 'd'))
 
-  let combined = computed(() => `${b.get()}${c.get()}${d.get()}`)
+  let combined = computed(cx => `${b.get(cx)}${c.get(cx)}${d.get(cx)}`)
 
   let unsubscribe = combined.subscribe(v => {
     values.push(v)
