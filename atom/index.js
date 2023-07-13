@@ -1,13 +1,13 @@
 import { clean } from '../clean-stores/index.js'
 
 let listenerQueue = []
-export let autosubscriberStack = []
-export let autosubscriber = cb =>
-  cb ? autosubscriberStack.at(-1)(cb) : autosubscriberStack.at(-1)
+export let autosubscribeStack = []
+export let autosubscribe = cb =>
+  cb ? autosubscribeStack.at(-1)(cb) : autosubscribeStack.at(-1)
 export let atom = initialValue => {
   let listeners = []
   let store = {
-    a: autosubscriberStack.at(-1),
+    a: autosubscribeStack.at(-1),
     get() {
       if (!store.lc) {
         store.listen(() => {})()

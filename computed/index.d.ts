@@ -47,11 +47,13 @@ interface Computed {
    *
    * import { $userId } from './users.js'
    *
-   * computed(async self) => {
-   *   let user = await fetch(`https://api.com/users/${userId()}`)
+   * computed(async use => {
+   *   let user =
+   *     await fetch(`https://api.com/users/${userId()}`)
    *     .then(response => response.json())
-   *   if (self.stale()) return // cancel cb run if the cb is stale. return value is ignored if stale
-   *   let messages = await fetch(`https://api.com/users/${userId()}/messages`)
+   *   if (use.stale()) return // cancel cb run if the cb is stale. return value is ignored if stale
+   *   let messages =
+   *     await fetch(`https://api.com/users/${userId()}/messages`)
    *     .then(response => response.json())
    *   return { user, messages } // This will be ignored if the cb is stale & set if the cb is fresh
    * })
@@ -66,14 +68,11 @@ interface Computed {
    * ```js
    * import { computed } from 'nanostores'
    *
-   * export const $colorScheme = computed(async self => {
+   * export const $colorScheme = computed(use => {
    *  let watch = window.matchMedia('(prefers-color-scheme: dark)')
-   *  let onchange = evt =>
-   *    self.save(evt.matches ? 'dark' : 'light')
-   *  self.on(() =>
-   *    watch.addEventListener('change', onchange)
-   *  ).off(() =>
-   *    watch.removeEventListener('change', onchange))
+   *  let onchange = evt => use.save(evt.matches ? 'dark' : 'light')
+   *  use.onStart(() => watch.addEventListener('change', onchange))
+   *  use.onStop(() => watch.removeEventListener('change', onchange))
    *  return onchange(watch)
    * })
    *
@@ -89,14 +88,14 @@ interface Computed {
    * const $path = atom('')
    * const $userCancel = atom(false)
    *
-   * const $download = computed(self => {
-   *   if (self() && self().path !== $path()) {
-   *     self().stream.cancel('path changed')
-   *     self.save(null)
+   * const $download = computed(use => {
+   *   if (use() && use().path !== $path()) {
+   *     use().stream.cancel('path changed')
+   *     use.save(null)
    *   }
    *   if (!$path()) return null
    *
-   *   const stream = self()?.stream || createStream()
+   *   const stream = use()?.stream || createStream()
    *   computed(() => {
    *     if ($userCancel() && stream) {
    *       stream.cancel('user cancelled')

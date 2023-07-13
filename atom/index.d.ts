@@ -99,6 +99,14 @@ export interface WritableAtom<Value = any> extends ReadableAtom<Value> {
 
 export type Atom<Value = any> = ReadableAtom<Value> | WritableAtom<Value>
 
+/**
+ * The Autosubscribe instance at the top of the autosubscribeStack.
+ *
+ * Used to implicitly get the autosubscribe of the current `computed` callback synchronous task.
+ * Note that the implicit autosubscribe is removed in a `computed` callback once the synchronous task is complete,
+ * such as when `await`, a Promise's `.then`, `queueMicrotask`, `setTimeout`, or an event callback is used.
+ */
+export function autosubscribe<Value = any>(): Autosubscribe<Value>
 export interface Autosubscribe<Value = any> {
   /**
    * @return The computed store's value
@@ -190,5 +198,3 @@ export declare let notifyId: number
 export function atom<Value, StoreExt = {}>(
   ...args: undefined extends Value ? [] | [Value] : [Value]
 ): WritableAtom<Value> & StoreExt
-
-export function autosubscriber<Value = any>(): Autosubscribe<Value>

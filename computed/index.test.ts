@@ -4,7 +4,7 @@ import { equal, ok } from 'uvu/assert'
 
 import {
   atom,
-  autosubscriber,
+  autosubscribe,
   computed,
   onMount,
   STORE_UNMOUNT_DELAY,
@@ -378,7 +378,7 @@ test('async api', async () => {
   ) => {
     cbCount++
     if ((rest as any).length) throw new Error('rest should be empty')
-    let use = autosubscriber()
+    let use = autosubscribe()
     if (deactivate) return use.undo()
     if (!personId) return null
     let $dirty = computed(() =>
@@ -656,7 +656,7 @@ test('will unbind to atoms defined inside of cb', async () => {
   let calls:[string, number][] = []
   let $p2p2p1p2 = computed([$active], active => {
     if (!active) return null
-    let use = autosubscriber()
+    let use = autosubscribe()
     let $p1 = computed([$base], base => {
       let p1 = base + 1
       calls.push(['$p1', p1])
@@ -668,7 +668,7 @@ test('will unbind to atoms defined inside of cb', async () => {
       return p2
     })
     let $p2p1p2 = computed([$p2], p2 => {
-      let p2p1p2Use = autosubscriber()
+      let p2p1p2Use = autosubscribe()
       let $p1p2 = computed([$p1, $p2], (p1, _p2) => {
         let p1p2 = p1 + _p2
         calls.push(['$p1p2', p1p2])

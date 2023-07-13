@@ -1,4 +1,4 @@
-import { atom, autosubscriberStack } from '../atom/index.js'
+import { atom, autosubscribeStack } from '../atom/index.js'
 import { onMount } from '../lifecycle/index.js'
 
 export let computed = (stores, cb) => {
@@ -38,11 +38,11 @@ export let computed = (stores, cb) => {
           }
           return storeOrCb.get()
         }
-        autosubscriberStack.push(use)
+        autosubscribeStack.push(use)
         try {
           return storeOrCb()
         } finally {
-          autosubscriberStack.pop()
+          autosubscribeStack.pop()
         }
       }
       use.onStart = onCb => {

@@ -1,5 +1,5 @@
 export { action, actionId, lastAction } from './action/index.js'
-export { atom, Atom, Autosubscribe, autosubscriber, ReadableAtom, WritableAtom } from './atom/index.js'
+export { atom, Atom, autosubscribe, Autosubscribe, ReadableAtom, WritableAtom } from './atom/index.js'
 export { clean, cleanStores } from './clean-stores/index.js'
 export { BoxAutosubscribe, computed, UnboxAutosubscribe } from './computed/index.js'
 export {
