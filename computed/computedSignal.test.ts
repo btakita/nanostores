@@ -676,8 +676,8 @@ test('will unbind to atoms defined inside of cb', async () => {
     })
     let total = use($p2) + use($p2p1p2)
     use
-      .on(() => onCount++)
-      .off(() => offCount++)
+      .onStart(() => onCount++)
+      .onStop(() => offCount++)
     calls.push(['$p2p2p1p2', total])
     return total
   })

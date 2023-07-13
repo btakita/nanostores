@@ -45,14 +45,14 @@ export let computed = (stores, cb) => {
           autosubscriberStack.pop()
         }
       }
-      use.on = onCb => {
+      use.onStart = onCb => {
         if (!stale()) {
           autosubscribeOnCbs.push(onCb)
           onCb()
         }
         return use
       }
-      use.off = offCb => {
+      use.onStop = offCb => {
         if (!stale()) {
           autosubscribeOffCbs.push(offCb)
         }

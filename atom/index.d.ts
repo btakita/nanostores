@@ -111,21 +111,21 @@ export interface Autosubscribe<Value = any> {
    */
   <V>(atom: ReadableAtom<V>): V
   /**
-   * Runs fn when the computed store is unmounted or when the computed store's cb is next run
-   *
-   * When .stale() is true, saving fn callback is deactivated.
-   *
-   * @param fn
-   */
-  off(fn: () => any): Autosubscribe<Value>
-  /**
    * Immediately runs fn & calls fn when the computed store is mounted.
    *
    * When .stale() is true, calling fn & saving fn callback is deactivated.
    *
    * @param fn
    */
-  on(fn: () => any): Autosubscribe<Value>
+  onStart(fn: () => any): Autosubscribe<Value>
+  /**
+   * Runs fn when the computed store is unmounted or when the computed store's cb is next run
+   *
+   * When .stale() is true, saving fn callback is deactivated.
+   *
+   * @param fn
+   */
+  onStop(fn: () => any): Autosubscribe<Value>
   /**
    * Sets the computed store's value & undoValue.
    * A subsequent call to .undo() will reset any intermediate values from `.set` to the given `newValue`.

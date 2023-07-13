@@ -59,7 +59,7 @@ interface Computed {
    *
    * Event binding & unbinding
    *
-   * Supports event binding with the {@link Autosubscribe.on} method & unbinding with the {@link Autosubscribe.off} method.
+   * Supports event binding with the {@link Autosubscribe.onStart} method & unbinding with the {@link Autosubscribe.onStop} method.
    *
    * In this example, the computed will bind to an event when listened to & unbind when all listeners are removed.
    *
