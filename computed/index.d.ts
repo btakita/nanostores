@@ -32,6 +32,9 @@ interface Computed {
     stores: [...OriginStores],
     cb: (...values: StoreValues<OriginStores>) => Value
   ): ReadableAtom<Value>
+  <Value extends any>(
+    cb: () => Value
+  ): ReadableAtom<Value>
 }
 
 export const computed: Computed

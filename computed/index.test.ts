@@ -54,10 +54,60 @@ test('converts stores values', () => {
   equal(renders, 3)
 })
 
+test('autosubscribe: converts stores values', () => {
+  let $letter = atom<{ letter: string }>({ letter: 'a' })
+  let $number = atom<{ number: number }>({ number: 0 })
+
+  let renders = 0
+  let $combine = computed(() => {
+    renders += 1
+    return `${$letter().letter} ${$number().number}`
+  })
+  equal(renders, 0)
+
+  let value: StoreValue<typeof $combine> = ''
+  let unbind = $combine.subscribe(combineValue => {
+    value = combineValue
+  })
+  equal(value, 'a 0')
+  equal(renders, 1)
+
+  $letter.set({ letter: 'b' })
+  equal(value, 'b 0')
+  equal(renders, 2)
+
+  $number.set({ number: 1 })
+  equal(value, 'b 1')
+  equal(renders, 3)
+
+  unbind()
+  clock.runAll()
+  equal(value, 'b 1')
+  equal(renders, 3)
+})
+
 test('works with single store', () => {
   let $number = atom<number>(1)
   let $decimal = computed($number, count => {
     return count * 10
+  })
+
+  let value
+  let unbind = $decimal.subscribe(decimalValue => {
+    value = decimalValue
+  })
+  equal(value, 10)
+
+  $number.set(2)
+  equal(value, 20)
+
+  unbind()
+})
+
+test('autosubscribe: works with single store', () => {
+  let $number = atom<number>(1)
+  let $decimal = computed(() => {
+    return $number() * 10
   })
 
   let value
@@ -102,6 +152,31 @@ test('prevents diamond dependency problem 1', () => {
   unsubscribe()
 })
 
+test('autosubscribe: prevents diamond dependency problem 1', () => {
+  let $store = atom<number>(0)
+  let values: string[] = []
+
+  let $a = computed($store, v => `a${v}`)
+  let $b = computed(() => $a().replace('a', 'b'))
+  let $c = computed(() => $a().replace('a', 'c'))
+  let $d = computed(() => $a().replace('a', 'd'))
+
+  let $combined = computed(() => `${$b()}${$c()}${$d()}`)
+
+  let unsubscribe = $combined.subscribe(v => {
+    values.push(v)
+  })
+
+  equal(values, ['b0c0d0'])
+
+  $store.set(1)
+  $store.set(2)
+
+  equal(values, ['b0c0d0', 'b1c1d1', 'b2c2d2'])
+
+  unsubscribe()
+})
+
 test('prevents diamond dependency problem 2', () => {
   let $store = atom<number>(0)
   let values: string[] = []
@@ -113,6 +188,30 @@ test('prevents diamond dependency problem 2', () => {
   let $e = computed($d, replacer('d', 'e'))
 
   let $combined = computed([$a, $e], (...args) => args.join(''))
+
+  let unsubscribe = $combined.subscribe(v => {
+    values.push(v)
+  })
+
+  equal(values, ['a0e0'])
+
+  $store.set(1)
+  equal(values, ['a0e0', 'a1e1'])
+
+  unsubscribe()
+})
+
+test('autosubscribe: prevents diamond dependency problem 2', () => {
+  let $store = atom<number>(0)
+  let values: string[] = []
+
+  let $a = computed(() => `a${$store()}`)
+  let $b = computed(() => $a().replace('a', 'b'))
+  let $c = computed(() => $b().replace('b', 'c'))
+  let $d = computed(() => $c().replace('c', 'd'))
+  let $e = computed(() => $d().replace('d', 'e'))
+
+  let $combined = computed(() => [$a(), $e()].join(''))
 
   let unsubscribe = $combined.subscribe(v => {
     values.push(v)
@@ -138,6 +237,31 @@ test('prevents diamond dependency problem 3', () => {
   let $combined = computed(
     [$a, $b, $c, $d],
     (a, b, c, d) => `${a}${b}${c}${d}`
+  )
+
+  let unsubscribe = $combined.subscribe(v => {
+    values.push(v)
+  })
+
+  equal(values, ['a0b0c0d0'])
+
+  $store.set(1)
+  equal(values, ['a0b0c0d0', 'a1b1c1d1'])
+
+  unsubscribe()
+})
+
+test('autosubscribe: prevents diamond dependency problem 3', () => {
+  let $store = atom<number>(0)
+  let values: string[] = []
+
+  let $a = computed(() => `a${$store()}`)
+  let $b = computed(() => $a().replace('a', 'b'))
+  let $c = computed(() => $b().replace('b', 'c'))
+  let $d = computed(() => $c().replace('c', 'd'))
+
+  let $combined = computed(
+    () => `${$a()}${$b()}${$c()}${$d()}`
   )
 
   let unsubscribe = $combined.subscribe(v => {
@@ -202,6 +326,51 @@ test('prevents diamond dependency problem 4 (complex)', () => {
   unsubscribe2()
 })
 
+test('autosubscribe: prevents diamond dependency problem 4 (complex)', () => {
+  let $store1 = atom<number>(0)
+  let $store2 = atom<number>(0)
+  let values: string[] = []
+
+  let $a = computed(() => `a${$store1()}`)
+  let $b = computed(() => `b${$store2()}`)
+
+  let $c = computed(() => `c${$a()}${$b()}`)
+  let $d = computed(() => `d${$a()}`)
+
+  let $e = computed(() => `e${$c()}${$d()}`)
+
+  let $f = computed(() => `f${$e()}`)
+  let $g = computed(() => `g${$f()}`)
+
+  let $combined1 = computed(() => $e())
+  let $combined2 = computed(() => `${$e()}${$g()}`)
+
+  let unsubscribe1 = $combined1.subscribe(v => {
+    values.push(v)
+  })
+
+  let unsubscribe2 = $combined2.subscribe(v => {
+    values.push(v)
+  })
+
+  equal(values, ['eca0b0da0', 'eca0b0da0gfeca0b0da0'])
+
+  $store1.set(1)
+  $store2.set(2)
+
+  equal(values, [
+    'eca0b0da0',
+    'eca0b0da0gfeca0b0da0',
+    'eca1b0da1',
+    'eca1b0da1gfeca1b0da1',
+    'eca1b2da1',
+    'eca1b2da1gfeca1b2da1'
+  ])
+
+  unsubscribe1()
+  unsubscribe2()
+})
+
 test('prevents diamond dependency problem 5', () => {
   let events = ''
   let $firstName = atom('John')
@@ -237,6 +406,40 @@ test('prevents diamond dependency problem 5', () => {
   equal(events, 'short full display short full display short full display ')
 })
 
+test('autosubscribe: prevents diamond dependency problem 5', () => {
+  let events = ''
+  let $firstName = atom('John')
+  let $lastName = atom('Doe')
+  let $fullName = computed(() => {
+    events += 'full '
+    return `${$firstName()} ${$lastName()}`
+  })
+  let $isFirstShort = computed(() => {
+    events += 'short '
+    return $firstName().length < 10
+  })
+  let $displayName = computed(
+    () => {
+      events += 'display '
+      return $isFirstShort() ? $fullName() : $firstName()
+    }
+  )
+
+  equal(events, '')
+
+  $displayName.listen(() => {})
+  equal($displayName(), 'John Doe')
+  equal(events, 'display short full ')
+
+  $firstName.set('Benedict')
+  equal($displayName(), 'Benedict Doe')
+  equal(events, 'display short full short full display ')
+
+  $firstName.set('Montgomery')
+  equal($displayName(), 'Montgomery')
+  equal(events, 'display short full short full display short full display ')
+})
+
 test('prevents diamond dependency problem 6', () => {
   let $store1 = atom<number>(0)
   let $store2 = atom<number>(0)
@@ -247,6 +450,29 @@ test('prevents diamond dependency problem 6', () => {
   let $c = computed($b, v => v.replace('b', 'c'))
 
   let $combined = computed([$a, $c], (a, c) => `${a}${c}`)
+
+  let unsubscribe = $combined.subscribe(v => {
+    values.push(v)
+  })
+
+  equal(values, ['a0c0'])
+
+  $store1.set(1)
+  equal(values, ['a0c0', 'a1c0'])
+
+  unsubscribe()
+})
+
+test('autosubscribe: prevents diamond dependency problem 6', () => {
+  let $store1 = atom<number>(0)
+  let $store2 = atom<number>(0)
+  let values: string[] = []
+
+  let $a = computed(() => `a${$store1()}`)
+  let $b = computed(() => `b${$store2()}`)
+  let $c = computed(() => $b().replace('b', 'c'))
+
+  let $combined = computed(() => `${$a()}${$c()}`)
 
   let unsubscribe = $combined.subscribe(v => {
     values.push(v)
@@ -282,15 +508,37 @@ test('prevents dependency listeners from being out of order', () => {
   unsubscribe()
 })
 
+test('autosubscribe: prevents dependency listeners from being out of order', () => {
+  let $base = atom(0)
+  let $a = computed(() => {
+    return `${$base()}a`
+  })
+  let $b = computed(() => {
+    return `${$a()}b`
+  })
+
+  equal($b(), '0ab')
+  let values: string[] = []
+  let unsubscribe = $b.subscribe(b => values.push(b))
+  equal(values, ['0ab'])
+
+  clock.tick(STORE_UNMOUNT_DELAY * 2)
+  equal($a(), '0a')
+  $base.set(1)
+  equal(values, ['0ab', '1ab'])
+
+  unsubscribe()
+})
+
 test('notifies when stores change within the same notifyId', () => {
   let $val = atom(1)
 
-  let $computed1 = computed($val, val => {
-    return val
+  let $computed1 = computed(() => {
+    return $val()
   })
 
-  let $computed2 = computed($computed1, computed1 => {
-    return computed1
+  let $computed2 = computed(() => {
+    return $computed1()
   })
 
   let events: any[] = []
@@ -351,11 +599,52 @@ test('is compatible with onMount', () => {
   equal(events, 'init destroy ')
 })
 
+test('autosubscribe: is compatible with onMount', () => {
+  let $store = atom(1)
+  let $deferrer = computed(() => $store() * 2)
+
+  let events = ''
+  onMount($deferrer, () => {
+    events += 'init '
+    return () => {
+      events += 'destroy '
+    }
+  })
+  equal(events, '')
+
+  let deferrerValue: number | undefined
+  let unbind = $deferrer.subscribe(value => {
+    deferrerValue = value
+  })
+  clock.runAll()
+  ok($deferrer.lc > 0)
+  equal($deferrer(), $store() * 2)
+  equal(deferrerValue, $store() * 2)
+  ok($store.lc > 0)
+  equal(events, 'init ')
+
+  $store.set(3)
+  equal($deferrer(), $store() * 2)
+  equal(deferrerValue, $store() * 2)
+
+  unbind()
+  clock.runAll()
+  equal($deferrer.lc, 0)
+  equal(events, 'init destroy ')
+})
+
 test('computes initial value when argument is undefined', () => {
   let $one = atom<string | undefined>(undefined)
   let $two = computed($one, (value: string | undefined) => !!value)
   equal($one.get(), undefined)
   equal($two.get(), false)
+})
+
+test('autosubscribe: computes initial value when argument is undefined', () => {
+  let $one = atom<string | undefined>(undefined)
+  let $two = computed($one, () => !!$one())
+  equal($one(), undefined)
+  equal($two(), false)
 })
 
 test('supports map', () => {
@@ -364,6 +653,70 @@ test('supports map', () => {
   })
   let $computedMap = computed($map, value => {
     return value.counter + 1
+  })
+
+  let mapValue: { counter: number } | undefined
+  let computedMapValue: number | undefined
+
+  let unsubscribeMap = $map.subscribe(value => {
+    mapValue = value
+  })
+  let unsubscribeComputedMap = $computedMap.subscribe(value => {
+    computedMapValue = value
+  })
+
+  $map.set({
+    counter: 2
+  })
+  equal(mapValue, { counter: 2 })
+  equal(computedMapValue, 3)
+
+  $map.setKey('counter', 3)
+  equal(mapValue, { counter: 3 })
+  equal(computedMapValue, 4)
+
+  unsubscribeMap()
+  unsubscribeComputedMap()
+})
+
+test('autosubscribe: supports map', () => {
+  let $map = map({
+    counter: 1
+  })
+  let $computedMap = computed(() => {
+    return $map().counter + 1
+  })
+
+  let mapValue: { counter: number } | undefined
+  let computedMapValue: number | undefined
+
+  let unsubscribeMap = $map.subscribe(value => {
+    mapValue = value
+  })
+  let unsubscribeComputedMap = $computedMap.subscribe(value => {
+    computedMapValue = value
+  })
+
+  $map.set({
+    counter: 2
+  })
+  equal(mapValue, { counter: 2 })
+  equal(computedMapValue, 3)
+
+  $map.setKey('counter', 3)
+  equal(mapValue, { counter: 3 })
+  equal(computedMapValue, 4)
+
+  unsubscribeMap()
+  unsubscribeComputedMap()
+})
+
+test('autosubscribe: supports map', () => {
+  let $map = map({
+    counter: 1
+  })
+  let $computedMap = computed(() => {
+    return $map().counter + 1
   })
 
   let mapValue: { counter: number } | undefined
@@ -426,4 +779,39 @@ test('supports deepMap', () => {
   unsubscribeComputedMap()
 })
 
+test('supports deepMap', () => {
+  let $deepMap = deepMap({
+    item: {
+      nested: 1
+    }
+  })
+  let $computedDeepMap = computed(() => {
+    return $deepMap().item.nested + 1
+  })
+
+  let deepMapValue: { item: { nested: number } } | undefined
+  let computedDeepMapValue: number | undefined
+
+  let unsubscribeDeepMap = $deepMap.subscribe(value => {
+    deepMapValue = value
+  })
+  let unsubscribeComputedMap = $computedDeepMap.subscribe(value => {
+    computedDeepMapValue = value
+  })
+
+  $deepMap.set({
+    item: {
+      nested: 2
+    }
+  })
+  equal(deepMapValue, { item: { nested: 2 } })
+  equal(computedDeepMapValue, 3)
+
+  $deepMap.setKey('item.nested', 3)
+  equal(deepMapValue, { item: { nested: 3 } })
+  equal(computedDeepMapValue, 4)
+
+  unsubscribeDeepMap()
+  unsubscribeComputedMap()
+})
 test.run()

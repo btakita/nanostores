@@ -1,10 +1,16 @@
-import { atom } from '../atom/index.js'
+import { atom, autosubscribeStack } from '../atom/index.js'
 import { onMount } from '../lifecycle/index.js'
 
 export let computed = (stores, cb) => {
-  if (!Array.isArray(stores)) stores = [stores]
-
+  if (cb) {
+    stores = Array.isArray(stores) ? stores : [stores]
+  } else {
+    cb = stores
+    stores = []
+  }
   let diamondArgs
+  let predefinedLength = stores.length
+  let unbinds = []
   let run = () => {
     let args = stores.map($store => $store.get())
     if (
@@ -12,16 +18,34 @@ export let computed = (stores, cb) => {
       args.some((arg, i) => arg !== diamondArgs[i])
     ) {
       diamondArgs = args
-      $computed.set(cb(...args))
+      let use = $atom => {
+        if (!~stores.indexOf($atom)) {
+          stores.push($atom)
+          unbinds.push($atom.listen(run, $computed))
+          args.push($atom.value)
+          $computed.l = Math.max($computed.l, $atom.l + 1)
+        }
+        return $atom.get()
+      }
+      try {
+        autosubscribeStack.push(use)
+        $computed.set(cb(...args.slice(0, predefinedLength)))
+      } finally {
+        autosubscribeStack.pop()
+      }
     }
   }
   let $computed = atom(undefined, Math.max(...stores.map(s => s.l)) + 1)
 
   onMount($computed, () => {
-    let unbinds = stores.map($store => $store.listen(run, $computed.l))
+    for (let store of stores) {
+      unbinds.push(store.listen(run, $computed))
+      $computed.l = Math.max($computed.l, store.l + 1)
+    }
     run()
-    return () => {
+    return ()=>{
       for (let unbind of unbinds) unbind()
+      unbinds.length = 0
     }
   })
 

@@ -18,6 +18,7 @@ export type ReadonlyIfObject<Value> = Value extends undefined
  * Store object.
  */
 export interface ReadableAtom<Value = any> {
+  (): Value
   readonly [actionId]: number | undefined
   /**
    * Get store value.
@@ -98,6 +99,8 @@ export interface WritableAtom<Value = any> extends ReadableAtom<Value> {
 }
 
 export type Atom<Value = any> = ReadableAtom<Value> | WritableAtom<Value>
+
+export type Autosubscribe<Value = any> = () => Value
 
 export declare let notifyId: number
 /**
